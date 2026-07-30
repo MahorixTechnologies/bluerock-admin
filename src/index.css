@@ -1,0 +1,239 @@
+:root {
+  /* BlueRock web light system */
+  --bg: #f6f6f7;
+  --surface: #eef1fb;
+  --surface-2: #ffffff;
+  --surface-hover: #e6ebf8;
+
+  /* Text */
+  --text: #0f2b71;
+  --text-muted: #5d6475;
+  --text-subtle: #aab1c0;
+
+  /* Lines */
+  --border: rgba(15, 43, 113, 0.08);
+  --border-strong: rgba(15, 43, 113, 0.14);
+
+  /* Brand (aligned with bluerock-web auth flow) */
+  --brand: #2b5df3;
+  --brand-hover: #1d4ff0;
+  --brand-contrast: #ffffff;
+  --brand-soft: rgba(43, 93, 243, 0.1);
+  --brand-soft-hover: rgba(43, 93, 243, 0.16);
+  --brand-ring: rgba(43, 93, 243, 0.28);
+
+  /* Semantic */
+  --success: #178b56;
+  --success-soft: rgba(23, 139, 86, 0.12);
+  --success-border: rgba(23, 139, 86, 0.22);
+  --warning: #cc8a1f;
+  --warning-soft: rgba(217, 119, 6, 0.14);
+  --warning-border: rgba(204, 138, 31, 0.26);
+  --danger: #e15353;
+  --danger-strong: #cd3535;
+  --danger-soft: rgba(220, 38, 38, 0.1);
+  --danger-border: rgba(225, 83, 83, 0.22);
+  --info: #2b5df3;
+  --info-soft: rgba(43, 93, 243, 0.12);
+  --info-border: rgba(43, 93, 243, 0.24);
+
+  /* Accents for stat cards */
+  --violet: #7b73ff;
+  --violet-soft: rgba(123, 115, 255, 0.12);
+  --amber: #d99632;
+  --amber-soft: rgba(217, 150, 50, 0.14);
+  --emerald: #22a06b;
+  --emerald-soft: rgba(34, 160, 107, 0.12);
+
+  /* Elevation */
+  --shadow-sm: 0 6px 18px rgba(31, 41, 55, 0.05);
+  --shadow-md: 0 16px 38px rgba(31, 41, 55, 0.07);
+  --shadow-lg: 0 24px 70px rgba(31, 41, 55, 0.12);
+
+  /* Radii */
+  --r-xs: 8px;
+  --r-sm: 11px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 24px;
+  --r-full: 999px;
+
+  /* Type */
+  --sans: Arial, Helvetica, sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  color-scheme: light dark;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Dark theme: applied when the OS prefers dark (and the user hasn't forced
+   light), or when the theme toggle explicitly sets data-theme="dark". */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface-2: #202432;
+    --surface-hover: #262b3b;
+
+    --text: #eef2ff;
+    --text-muted: #b5bfd2;
+    --text-subtle: #7d89a1;
+
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.16);
+
+    --brand: #6f95ff;
+    --brand-hover: #83a5ff;
+    --brand-soft: rgba(111, 149, 255, 0.18);
+    --brand-soft-hover: rgba(111, 149, 255, 0.26);
+    --brand-ring: rgba(111, 149, 255, 0.4);
+
+    --success: #4ade80;
+    --success-soft: rgba(74, 222, 128, 0.14);
+    --success-border: rgba(74, 222, 128, 0.28);
+    --warning: #fbbf24;
+    --warning-soft: rgba(251, 191, 36, 0.14);
+    --warning-border: rgba(251, 191, 36, 0.3);
+    --danger: #f87171;
+    --danger-strong: #ef4444;
+    --danger-soft: rgba(248, 113, 113, 0.14);
+    --danger-border: rgba(248, 113, 113, 0.3);
+    --info: #6f95ff;
+    --info-soft: rgba(111, 149, 255, 0.18);
+    --info-border: rgba(111, 149, 255, 0.32);
+
+    --violet: #a78bfa;
+    --violet-soft: rgba(167, 139, 250, 0.16);
+    --amber: #fbbf24;
+    --amber-soft: rgba(251, 191, 36, 0.14);
+    --emerald: #34d399;
+    --emerald-soft: rgba(52, 211, 153, 0.14);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 24px 48px -18px rgba(0, 0, 0, 0.7), 0 8px 20px -12px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* Explicit dark override from the toggle (wins over the OS preference). */
+:root[data-theme='dark'] {
+  --bg: #0f1117;
+  --surface: #181c27;
+  --surface-2: #202432;
+  --surface-hover: #262b3b;
+
+  --text: #eef2ff;
+  --text-muted: #b5bfd2;
+  --text-subtle: #7d89a1;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  --brand: #6f95ff;
+  --brand-hover: #83a5ff;
+  --brand-soft: rgba(111, 149, 255, 0.18);
+  --brand-soft-hover: rgba(111, 149, 255, 0.26);
+  --brand-ring: rgba(111, 149, 255, 0.4);
+
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.14);
+  --success-border: rgba(74, 222, 128, 0.28);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.14);
+  --warning-border: rgba(251, 191, 36, 0.3);
+  --danger: #f87171;
+  --danger-strong: #ef4444;
+  --danger-soft: rgba(248, 113, 113, 0.14);
+  --danger-border: rgba(248, 113, 113, 0.3);
+  --info: #6f95ff;
+  --info-soft: rgba(111, 149, 255, 0.18);
+  --info-border: rgba(111, 149, 255, 0.32);
+
+  --violet: #a78bfa;
+  --violet-soft: rgba(167, 139, 250, 0.16);
+  --amber: #fbbf24;
+  --amber-soft: rgba(251, 191, 36, 0.14);
+  --emerald: #34d399;
+  --emerald-soft: rgba(52, 211, 153, 0.14);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 24px 48px -18px rgba(0, 0, 0, 0.7), 0 8px 20px -12px rgba(0, 0, 0, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100svh;
+  background: var(--bg);
+  color: var(--text);
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+}
+
+a {
+  color: var(--brand);
+}
+
+::selection {
+  background: var(--brand-soft-hover);
+}
+
+/* Refined scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--r-full);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-subtle);
+  background-clip: padding-box;
+}
