@@ -1,23 +1,23 @@
 :root {
-  /* BlueRock emerald system — mirrors bluerock-web live palette */
+  /* BlueRock blue system — mirrors bluerock-web live palette */
   --bg: #eef2f5;
   --panel-soft: #f7f8fa;
   --surface: #eef1fb;
   --surface-2: #ffffff;
   --surface-hover: #e6ebf8;
 
-  /* Forest / emerald greens (bluerock-web sidebar + primary) */
-  --forest: #0d4f3b;
-  --forest-600: #0a3f2e;
-  --forest-500: #105d45;
-  --forest-400: #166b4f;
-  --emerald: #16a34a;
-  --emerald-600: #15803d;
-  --emerald-soft: rgba(22, 163, 74, 0.12);
-  --emerald-soft-hover: rgba(22, 163, 74, 0.20);
-  --emerald-ring: rgba(22, 163, 74, 0.28);
-  --mint: #4ade80;
-  --mint-soft: rgba(74, 222, 128, 0.15);
+  /* Sidebar navy + primary blue (bluerock-web sidebar + primary) */
+  --sidebar: #0a2a8c;
+  --sidebar-600: #07206e;
+  --sidebar-hover: #0f37a8;
+  --sidebar-active: #1442c4;
+  --sidebar-accent: #7ca8ff;
+  --sidebar-accent-soft: rgba(124, 168, 255, 0.15);
+  --primary: #1e5bff;
+  --primary-600: #1849d6;
+  --primary-soft: rgba(30, 91, 255, 0.10);
+  --primary-soft-hover: rgba(30, 91, 255, 0.18);
+  --primary-ring: rgba(30, 91, 255, 0.28);
 
   /* Text */
   --text: #111827;
@@ -30,17 +30,17 @@
   --border-strong: rgba(17, 24, 39, 0.14);
 
   /* Legacy brand aliases (smoothed migration) */
-  --brand: #16a34a;
-  --brand-hover: #15803d;
+  --brand: #1e5bff;
+  --brand-hover: #1849d6;
   --brand-contrast: #ffffff;
-  --brand-soft: rgba(22, 163, 74, 0.10);
-  --brand-soft-hover: rgba(22, 163, 74, 0.18);
-  --brand-ring: rgba(22, 163, 74, 0.28);
+  --brand-soft: rgba(30, 91, 255, 0.10);
+  --brand-soft-hover: rgba(30, 91, 255, 0.18);
+  --brand-ring: rgba(30, 91, 255, 0.28);
 
   /* Semantic */
-  --success: #10b981;
-  --success-soft: rgba(16, 185, 129, 0.12);
-  --success-border: rgba(16, 185, 129, 0.22);
+  --success: #16a34a;
+  --success-soft: rgba(22, 163, 74, 0.12);
+  --success-border: rgba(22, 163, 74, 0.22);
   --warning: #d97706;
   --warning-soft: rgba(217, 119, 6, 0.14);
   --warning-border: rgba(217, 119, 6, 0.26);
@@ -52,21 +52,21 @@
   --info-soft: rgba(37, 99, 235, 0.12);
   --info-border: rgba(37, 99, 235, 0.24);
 
-  /* Accents for stat cards (kept distinct from brand) */
+  /* Accents for stat cards (kept distinct from primary) */
   --violet: #7b73ff;
   --violet-soft: rgba(123, 115, 255, 0.12);
   --amber: #d99632;
   --amber-soft: rgba(217, 150, 50, 0.14);
-  --emerald-alt: #22a06b;
-  --emerald-alt-soft: rgba(34, 160, 107, 0.12);
+  --teal: #0d9488;
+  --teal-soft: rgba(13, 148, 136, 0.12);
 
-  /* Elevation — green-tinted for sidebars, neutral for cards */
+  /* Elevation — navy-tinted for sidebar, neutral for cards */
   --shadow-sm: 0 6px 18px rgba(17, 24, 39, 0.04);
   --shadow-md: 0 16px 38px rgba(17, 24, 39, 0.06);
   --shadow-lg: 0 24px 70px rgba(17, 24, 39, 0.10);
-  --shadow-sidebar: 0 20px 60px rgba(13, 79, 59, 0.35);
-  --shadow-primary: 0 8px 24px rgba(22, 163, 74, 0.25);
-  --shadow-primary-hover: 0 12px 32px rgba(22, 163, 74, 0.35);
+  --shadow-sidebar: 0 20px 60px rgba(10, 42, 140, 0.35);
+  --shadow-primary: 0 8px 24px rgba(30, 91, 255, 0.25);
+  --shadow-primary-hover: 0 12px 32px rgba(30, 91, 255, 0.35);
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
   --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.06), 0 12px 28px rgba(0, 0, 0, 0.05);
   --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -111,23 +111,17 @@
     --border: rgba(255, 255, 255, 0.08);
     --border-strong: rgba(255, 255, 255, 0.16);
 
-    --forest: #0a3f2e;
-    --forest-600: #083526;
-    --forest-500: #0d4f3b;
-    --forest-400: #105d45;
-    --emerald: #4ade80;
-    --emerald-600: #22c55e;
-    --emerald-soft: rgba(74, 222, 128, 0.18);
-    --emerald-soft-hover: rgba(74, 222, 128, 0.28);
-    --emerald-ring: rgba(74, 222, 128, 0.40);
-    --mint: #86efac;
-    --mint-soft: rgba(134, 239, 172, 0.20);
+    --primary: #5b8dff;
+    --primary-600: #3d6fff;
+    --primary-soft: rgba(91, 141, 255, 0.18);
+    --primary-soft-hover: rgba(91, 141, 255, 0.28);
+    --primary-ring: rgba(91, 141, 255, 0.40);
 
-    --brand: #4ade80;
-    --brand-hover: #86efac;
-    --brand-soft: rgba(74, 222, 128, 0.18);
-    --brand-soft-hover: rgba(74, 222, 128, 0.28);
-    --brand-ring: rgba(74, 222, 128, 0.40);
+    --brand: #5b8dff;
+    --brand-hover: #8ab0ff;
+    --brand-soft: rgba(91, 141, 255, 0.18);
+    --brand-soft-hover: rgba(91, 141, 255, 0.28);
+    --brand-ring: rgba(91, 141, 255, 0.40);
 
     --success: #4ade80;
     --success-soft: rgba(74, 222, 128, 0.14);
@@ -147,15 +141,15 @@
     --violet-soft: rgba(167, 139, 250, 0.16);
     --amber: #fbbf24;
     --amber-soft: rgba(251, 191, 36, 0.14);
-    --emerald-alt: #34d399;
-    --emerald-alt-soft: rgba(52, 211, 153, 0.14);
+    --teal: #2dd4bf;
+    --teal-soft: rgba(45, 212, 191, 0.16);
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40);
     --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.50), 0 2px 6px -2px rgba(0, 0, 0, 0.40);
     --shadow-lg: 0 24px 48px -18px rgba(0, 0, 0, 0.70), 0 8px 20px -12px rgba(0, 0, 0, 0.50);
     --shadow-sidebar: 0 20px 60px rgba(0, 0, 0, 0.60);
-    --shadow-primary: 0 8px 24px rgba(34, 197, 94, 0.25);
-    --shadow-primary-hover: 0 12px 32px rgba(34, 197, 94, 0.35);
+    --shadow-primary: 0 8px 24px rgba(59, 130, 246, 0.25);
+    --shadow-primary-hover: 0 12px 32px rgba(59, 130, 246, 0.35);
   }
 }
 
@@ -173,23 +167,17 @@
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.16);
 
-  --forest: #0a3f2e;
-  --forest-600: #083526;
-  --forest-500: #0d4f3b;
-  --forest-400: #105d45;
-  --emerald: #4ade80;
-  --emerald-600: #22c55e;
-  --emerald-soft: rgba(74, 222, 128, 0.18);
-  --emerald-soft-hover: rgba(74, 222, 128, 0.28);
-  --emerald-ring: rgba(74, 222, 128, 0.40);
-  --mint: #86efac;
-  --mint-soft: rgba(134, 239, 172, 0.20);
+  --primary: #5b8dff;
+  --primary-600: #3d6fff;
+  --primary-soft: rgba(91, 141, 255, 0.18);
+  --primary-soft-hover: rgba(91, 141, 255, 0.28);
+  --primary-ring: rgba(91, 141, 255, 0.40);
 
-  --brand: #4ade80;
-  --brand-hover: #86efac;
-  --brand-soft: rgba(74, 222, 128, 0.18);
-  --brand-soft-hover: rgba(74, 222, 128, 0.28);
-  --brand-ring: rgba(74, 222, 128, 0.40);
+  --brand: #5b8dff;
+  --brand-hover: #8ab0ff;
+  --brand-soft: rgba(91, 141, 255, 0.18);
+  --brand-soft-hover: rgba(91, 141, 255, 0.28);
+  --brand-ring: rgba(91, 141, 255, 0.40);
 
   --success: #4ade80;
   --success-soft: rgba(74, 222, 128, 0.14);
@@ -209,15 +197,15 @@
   --violet-soft: rgba(167, 139, 250, 0.16);
   --amber: #fbbf24;
   --amber-soft: rgba(251, 191, 36, 0.14);
-  --emerald-alt: #34d399;
-  --emerald-alt-soft: rgba(52, 211, 153, 0.14);
+  --teal: #2dd4bf;
+  --teal-soft: rgba(45, 212, 191, 0.16);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40);
   --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.50), 0 2px 6px -2px rgba(0, 0, 0, 0.40);
   --shadow-lg: 0 24px 48px -18px rgba(0, 0, 0, 0.70), 0 8px 20px -12px rgba(0, 0, 0, 0.50);
   --shadow-sidebar: 0 20px 60px rgba(0, 0, 0, 0.60);
-  --shadow-primary: 0 8px 24px rgba(34, 197, 94, 0.25);
-  --shadow-primary-hover: 0 12px 32px rgba(34, 197, 94, 0.35);
+  --shadow-primary: 0 8px 24px rgba(59, 130, 246, 0.25);
+  --shadow-primary-hover: 0 12px 32px rgba(59, 130, 246, 0.35);
 }
 
 * {
@@ -261,11 +249,11 @@ button {
 }
 
 a {
-  color: var(--emerald);
+  color: var(--primary);
 }
 
 ::selection {
-  background: var(--emerald-soft-hover);
+  background: var(--primary-soft-hover);
 }
 
 * {

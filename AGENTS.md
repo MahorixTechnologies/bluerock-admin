@@ -29,8 +29,12 @@ bluerock-admin/
 │   └── icons.svg             # SVG sprite (heroicons set)
 ├── src/
 │   ├── assets/               # static images (hero, etc.)
+│   ├── components/           # standalone views split out of App.tsx (OwnerApplicationsView, AuditLogView, …)
+│   ├── lib/
+│   │   └── adminCore.tsx     # shared types, demo data, apiFetch, Icon/Badge/ErrorBanner primitives,
+│   │                         # useAdminResource + usePagedItems/Pagination hooks
 │   ├── App.css               # admin-specific component styles
-│   ├── App.tsx               # entire SPA shell, views, routing, data
+│   ├── App.tsx               # SPA shell, routing, and the views not yet split out
 │   ├── index.css             # global tokens + resets (mirrors bluerock-web)
 │   └── main.tsx              # ReactDOM.createRoot entry
 ├── .env.example
@@ -43,7 +47,7 @@ bluerock-admin/
 └── vite.config.ts
 ```
 
-Everything currently lives in `App.tsx` (sidebar, tabs, tables, modals, login, detail views, data state). It is valid to split out future tabs/components into `src/components/<feature>/` but only once a tab's API + visual contract is stable.
+Most views still live in `App.tsx` (sidebar, tabs, tables, modals, login, detail views, data state), but the shared list-fetch/demo-fallback/error-state pattern now lives in the `useAdminResource` hook in `src/lib/adminCore.tsx`, and newer views (owner applications, audit log) are split into `src/components/<Feature>View.tsx`. New tabs should follow that pattern — pull shared types/helpers/hooks from `adminCore`, define the view in its own file under `src/components/`, and only grow `App.tsx` for its routing/nav wiring.
 
 ---
 
@@ -53,20 +57,27 @@ The admin design has been restyled to match `bluerock-web`'s aesthetic. **Do not
 
 ### 3.1 Core colors
 
+Tokens live in `src/index.css` and match `bluerock-web`'s real, live palette (`bluerock-web/src/app/globals.css`) — not an approximation of it:
+
 | Token | Value | Purpose |
 |---|---|---|
-| `--app-bg` | `#f5f7ff` | page background (soft pale blue) |
-| `--panel-bg` | `#ffffff` | cards, sidebar, content panels |
-| `--primary` | `#2563eb` | primary buttons, links, active states |
-| `--primary-600` | `#1d4ed8` | button hover / pressed |
-| `--primary-soft` | `rgba(37,99,235,0.12)` | pills, chip backgrounds |
+| `--bg` | `#eef2f5` | page background |
+| `--surface-2` | `#ffffff` | cards, content panels |
+| `--sidebar` | `#0a2a8c` | sidebar background (navy, matches bluerock-web) |
+| `--sidebar-active` | `#1442c4` | active nav item background |
+| `--sidebar-accent` | `#7ca8ff` | icons/highlights on the dark sidebar |
+| `--primary` | `#1e5bff` | primary buttons, links, active states |
+| `--primary-600` | `#1849d6` | button hover / pressed |
+| `--primary-soft` | `rgba(30,91,255,0.10)` | pills, chip backgrounds |
 | `--accent` | `#0b2466` | headings, strong text |
-| `--text` | `#1e293b` | body text |
-| `--muted` | `#64748b` | secondary text, placeholders |
-| `--border` | `rgba(15,23,42,0.10)` | card hairlines, dividers |
-| `--danger` | `#ef4444` · `--danger-soft: rgba(239,68,68,0.12)` | errors, destructive actions |
-| `--success` | `#16a34a` · `--success-soft: rgba(22,163,74,0.12)` | success, active |
+| `--text` | `#111827` | body text |
+| `--text-muted` | `#6b7280` | secondary text, placeholders |
+| `--border` | `rgba(17,24,39,0.08)` | card hairlines, dividers |
+| `--danger` | `#ef4444` · `--danger-soft: rgba(239,68,68,0.10)` | errors, destructive actions |
+| `--success` | `#16a34a` · `--success-soft: rgba(22,163,74,0.12)` | success, active (kept green — a semantic color independent of brand) |
 | `--warning` | `#d97706` · `--warning-soft: rgba(217,119,6,0.14)` | warnings |
+
+`--violet`, `--amber`, and `--teal` are additional stat-card accent colors kept visually distinct from `--primary`; they carry no semantic meaning of their own.
 
 ### 3.2 Typography
 
@@ -89,13 +100,17 @@ The current view set (in `view` state + sidebar):
 | View slug | Sidebar label | Purpose |
 |---|---|---|
 | `dashboard` | Dashboard | Overview hero, stat cards, quick actions, system snapshot |
-| `users` | Users | Paginated users table with status actions + `View user` |
-| `listings` | Listings | Paginated listings table with moderation + `View listing` |
-| `bookings` | Bookings | Paginated bookings table + `View booking` |
+| `users` | Users | Client-paginated (20/page) users table with status actions + `View user` |
+| `listings` | Listings | Client-paginated (20/page) listings table with moderation + `View listing` |
+| `bookings` | Bookings | Client-paginated (20/page) bookings table + `View booking` |
+| `owner_applications` | Owner Applications | Pending renter→landlord applications with Approve/Reject (`src/components/OwnerApplicationsView.tsx`) |
+| `audit_logs` | Audit Log | Recent admin actions, newest first (`src/components/AuditLogView.tsx`) |
 | `incomes` | Incomes | Revenue summary, service charge editor, fee income per booking |
 | `reports` | Reports | Aggregated metrics and attention items |
 | `settings` | Settings | Platform support details, payout day, maintenance mode |
 | `login` | *(guarded)* | Sign-in form; auto redirects |
+
+Pagination is client-side: the full list is still fetched in one call and chunked in the browser (`usePagedItems` in `adminCore.tsx`), not paged via query params against the backend.
 
 ### 4.1 Detail views
 
@@ -104,8 +119,10 @@ The three entity detail views are embedded in the same `App.tsx` render path via
 | Detail state | Opens from | Contents |
 |---|---|---|
 | `{ kind: 'user', id }` | Users → View | profile summary, status, booking/listing counts, listings, bookings, status actions |
-| `{ kind: 'listing', id }` | Listings → View | title, images, host, description, amenities, rules, status actions, moderation |
+| `{ kind: 'listing', id }` | Listings → View | title, images, host, description, amenities, rules, status actions, moderation, **Reviews panel** (fetches `GET /listings/:id/reviews`, flag/unflag via `PATCH /admin/reviews/:id/moderate`) |
 | `{ kind: 'booking', id }` | Bookings → View | stay window, renter, listing, cost breakdown, fee, status, payment |
+
+Note: the public reviews list excludes `REJECTED` reviews, so the Reviews panel updates moderation state optimistically in local state rather than refetching after a flag/unflag — a refetch would make a freshly-rejected review disappear from the list before it could be unflagged.
 
 ---
 
@@ -155,10 +172,17 @@ Always prefer the live endpoint. When the backend is reachable, `bluerock-admin`
 | `GET`  | `/admin/users/:id` | single user detail (added for View User) |
 | `PATCH`| `/admin/users/:id/status` | set ACTIVE/SUSPENDED |
 | `GET`  | `/admin/listings` | list listings |
-| `PATCH`| `/admin/listings/:id/status` | approve / reject / set pending |
+| `PATCH`| `/listings/:id/status` | approve / reject listing (ADMIN only; lives in the listings module, not admin, despite historically being documented under `/admin/listings`) |
 | `GET`  | `/admin/bookings` | list bookings |
+| `GET`  | `/admin/owner-applications?status=PENDING\|APPROVED\|REJECTED\|NONE` | list renter→landlord applications (defaults to PENDING) |
+| `PATCH`| `/admin/owner-applications/:userId/decision` | `{ decision: 'APPROVE' \| 'REJECT' }` — approve flips role to LANDLORD |
+| `GET`  | `/listings/:listingId/reviews` | list a listing's reviews (public route, lives in the listings/reviews module, excludes `REJECTED` reviews) |
+| `PATCH`| `/admin/reviews/:id/moderate` | `{ status: 'APPROVED' \| 'REJECTED' }` — hide/show a review from public listing pages |
+| `GET`  | `/admin/audit-logs?limit=50` | recent admin actions, newest first (limit clamped 1–200) |
 
-The backend controllers/services live in `../bluerock-backend/src/modules/admin/*`. Any new admin page you add must have a matching endpoint added there first before wiring from the admin UI.
+The backend controllers/services live in `../bluerock-backend/src/modules/admin/*` (owner applications, review moderation, audit logs) and `../bluerock-backend/src/modules/reviews/*` (review listing). Any new admin page you add must have a matching endpoint added there first before wiring from the admin UI.
+
+**Role changes require re-login.** A user's role is baked into their JWT at login, so a renter approved to LANDLORD will not see landlord-gated tools until they log out and back in. Any UI that triggers a role change (e.g. the owner application decision) must say so rather than implying it takes effect immediately.
 
 ---
 
