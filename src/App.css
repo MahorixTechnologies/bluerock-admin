@@ -218,11 +218,6 @@
   background: currentColor;
 }
 
-.statusDot--demo {
-  color: var(--amber);
-  background: var(--amber-soft);
-}
-
 .statusDot--live {
   color: var(--sidebar-accent);
   background: rgba(124, 168, 255, 0.16);
@@ -1605,41 +1600,6 @@
   margin-top: 6px;
   font-size: 14px;
   color: var(--text-muted);
-}
-
-.demoHint {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 20px 0;
-  padding: 11px 14px;
-  border-radius: var(--r-md);
-  background: #eef4ff;
-  border: 1px solid rgba(30, 91, 255, 0.20);
-  color: var(--primary-600);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-:root[data-theme='dark'] .demoHint {
-  background: rgba(91, 141, 255, 0.14);
-  border-color: rgba(91, 141, 255, 0.30);
-  color: var(--primary);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .demoHint {
-    background: rgba(91, 141, 255, 0.14);
-    border-color: rgba(91, 141, 255, 0.30);
-    color: var(--primary);
-  }
-}
-
-.demoHint svg {
-  flex-shrink: 0;
-}
-
-.demoHint strong {
-  font-weight: 900;
 }
 
 .loginForm {

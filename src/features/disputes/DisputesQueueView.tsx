@@ -3,22 +3,19 @@ import {
   apiFetch,
   Badge,
   bookingStatusTone,
-  cloneData,
-  demoDisputes,
   disputeStatusTone,
   ErrorBanner,
   formatDate,
   formatDateTime,
   formatMoney,
   Icon,
-  isDemoSession,
   useAdminResource,
   usePagedItems,
   Pagination,
   type AdminDispute,
   type DisputeStatus,
   type Session,
-} from '../lib/adminCore';
+} from '../../lib/adminCore';
 
 const STATUS_FILTERS: DisputeStatus[] = ['OPEN', 'UNDER_REVIEW', 'RESOLVED', 'REJECTED'];
 
@@ -29,16 +26,14 @@ const DECISIONS: { status: DisputeStatus; label: string; icon: 'check' | 'x' | '
 ];
 
 export default function DisputesQueueView({ apiUrl, session }: { apiUrl: string; session: Session }) {
-  const demoMode = isDemoSession(session);
   const [statusFilter, setStatusFilter] = useState<DisputeStatus>('OPEN');
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
 
   const loader = useCallback(async () => {
-    if (demoMode) return cloneData(demoDisputes).filter((item) => item.status === statusFilter);
     return await apiFetch<AdminDispute[]>(apiUrl, session.accessToken, `/admin/disputes?status=${statusFilter}`);
-  }, [apiUrl, demoMode, session.accessToken, statusFilter]);
+  }, [apiUrl, session.accessToken, statusFilter]);
 
   const { data: items, setData: setItems, loading, error, reload } = useAdminResource<AdminDispute[]>(loader, []);
   const { page, setPage, totalPages, pageItems } = usePagedItems(items);
@@ -48,10 +43,6 @@ export default function DisputesQueueView({ apiUrl, session }: { apiUrl: string;
     setBusyId(dispute.id);
     const resolutionNotes = noteDrafts[dispute.id]?.trim() || undefined;
     try {
-      if (demoMode) {
-        setItems((prev) => prev.filter((item) => item.id !== dispute.id));
-        return;
-      }
       await apiFetch(apiUrl, session.accessToken, `/admin/disputes/${dispute.id}/decision`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

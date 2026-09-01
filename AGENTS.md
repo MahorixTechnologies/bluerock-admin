@@ -15,8 +15,24 @@
 | Styling | Plain CSS in `src/index.css` + `src/App.css` — *not* Tailwind or CSS-in-JS |
 | Linting | ESLint via `eslint.config.js` · typescript-eslint parser |
 | Icons | Inline SVG via `/public/icons.svg` sprite · referenced by `<use href="/icons.svg#icon-id" />` |
+| Routing | **react-router-dom 7** (`BrowserRouter`) — real URLs, deep-linkable, browser back/forward works |
 
-The admin app is a **single-page application mounted at `src/App.tsx`** with client-side hash-based view switching. It is not using React Router yet. All tabs are routed through the `view` state in `App.tsx`.
+The admin app is a SPA using `react-router-dom`'s `BrowserRouter` for real client-side routing (as of
+the 2026-09-01 router migration), with each domain split into its own folder under `src/features/`
+(as of the 2026-09-01 folder-per-domain refactor). `App.tsx` renders a top-level `<Routes>` that gates
+everything on `session`: `/login` (→ `features/auth/LoginView.tsx`) when signed out, `/*` →
+`layout/AppShell.tsx` when signed in. `AppShell` renders the sidebar/topbar chrome plus its own nested
+`<Routes>` for the authenticated pages (`/`, `/users`, `/users/:userId`, `/listings`,
+`/listings/:listingId`, `/bookings`, `/bookings/:bookingId`, `/owner-applications`, `/audit-log`,
+`/reports-queue`, `/disputes`, `/incomes`, `/reports`, `/settings`), each element imported from its
+domain folder under `src/features/`. Sidebar nav highlighting and the topbar title/subtitle are derived
+from `location.pathname` via the `ROUTE_META` table in `src/layout/navigation.ts` (matches exact paths
+and `/users/:id`-style patterns with a small regex). Detail views read their id with `useParams()` and
+navigate back with `useNavigate()` — they don't take `onBack`/`onViewX` callback props from a
+parent-held `view` state.
+Because this is a client-rendered SPA (not Next.js SSR), the static host must rewrite unknown paths to
+`index.html` for deep links to work — `nginx.conf` already has `try_files $uri $uri/ /index.html;`; keep
+that if you change the deploy target.
 
 ---
 
@@ -29,14 +45,30 @@ bluerock-admin/
 │   └── icons.svg             # SVG sprite (heroicons set)
 ├── src/
 │   ├── assets/               # static images (hero, etc.)
-│   ├── components/           # standalone views split out of App.tsx (OwnerApplicationsView, AuditLogView, …)
+│   ├── layout/
+│   │   ├── AppShell.tsx      # sidebar + topbar chrome, nested <Routes> for authenticated pages
+│   │   ├── navigation.ts     # NAV_ITEMS (sidebar) + ROUTE_META (path → title/subtitle/active nav key)
+│   │   └── useDarkMode.ts    # theme state (localStorage + system preference)
+│   ├── features/
+│   │   ├── auth/LoginView.tsx
+│   │   ├── dashboard/DashboardView.tsx
+│   │   ├── users/{UsersView,UserDetailView}.tsx
+│   │   ├── listings/{ListingsView,ListingDetailView,ListingReviewsPanel}.tsx
+│   │   ├── bookings/{BookingsView,BookingDetailView}.tsx
+│   │   ├── owner-applications/OwnerApplicationsView.tsx
+│   │   ├── reports-queue/ReportsQueueView.tsx
+│   │   ├── disputes/DisputesQueueView.tsx
+│   │   ├── audit-log/AuditLogView.tsx
+│   │   ├── incomes/{IncomesView,FeeRulesPanel}.tsx
+│   │   ├── reports/{ReportsView,AnalyticsTrendsChart}.tsx
+│   │   └── settings/SettingsView.tsx
 │   ├── lib/
-│   │   └── adminCore.tsx     # shared types, demo data, apiFetch, Icon/Badge/ErrorBanner primitives,
+│   │   └── adminCore.tsx     # shared types, apiFetch, Icon/Badge/ErrorBanner primitives,
 │   │                         # useAdminResource + usePagedItems/Pagination hooks
 │   ├── App.css               # admin-specific component styles
-│   ├── App.tsx               # SPA shell, routing, and the views not yet split out
+│   ├── App.tsx               # top-level <Routes>: /login vs authenticated AppShell, session/apiUrl/settings state
 │   ├── index.css             # global tokens + resets (mirrors bluerock-web)
-│   └── main.tsx              # ReactDOM.createRoot entry
+│   └── main.tsx              # ReactDOM.createRoot entry, wraps <App/> in <BrowserRouter>
 ├── .env.example
 ├── eslint.config.js
 ├── index.html                # sets theme-color, <title>, mounts #root
@@ -47,7 +79,13 @@ bluerock-admin/
 └── vite.config.ts
 ```
 
-Most views still live in `App.tsx` (sidebar, tabs, tables, modals, login, detail views, data state), but the shared list-fetch/demo-fallback/error-state pattern now lives in the `useAdminResource` hook in `src/lib/adminCore.tsx`, and newer views (owner applications, audit log) are split into `src/components/<Feature>View.tsx`. New tabs should follow that pattern — pull shared types/helpers/hooks from `adminCore`, define the view in its own file under `src/components/`, and only grow `App.tsx` for its routing/nav wiring.
+Each domain's view(s) live in their own `src/features/<domain>/` folder — one file per component, no
+barrel `index.ts`, imported directly by path from `AppShell.tsx`. A file within a domain folder that
+needs a sibling component (e.g. `listings/ListingDetailView.tsx` importing `./ListingReviewsPanel`)
+imports it with a relative path; everything imports shared types/helpers/hooks from
+`../../lib/adminCore` (two levels up from `src/features/<domain>/`, one level up from `src/layout/`).
+New tabs should follow the same shape: add a `src/features/<new-domain>/` folder for the view(s), wire
+its `<Route>` into `AppShell.tsx`, and add its nav entry + route-meta entry to `src/layout/navigation.ts`.
 
 ---
 
@@ -95,32 +133,36 @@ Tokens live in `src/index.css` and match `bluerock-web`'s real, live palette (`b
 
 ## 4. Views / Tabs
 
-The current view set (in `view` state + sidebar):
+The current view set (real routes, defined in `src/layout/navigation.ts`'s `NAV_ITEMS` / `ROUTE_META` and `AppShell`'s `<Routes>`):
 
-| View slug | Sidebar label | Purpose |
+| Path | Sidebar label | Purpose |
 |---|---|---|
-| `dashboard` | Dashboard | Overview hero, stat cards, quick actions, system snapshot |
-| `users` | Users | Client-paginated (20/page) users table with status actions + `View user` |
-| `listings` | Listings | Client-paginated (20/page) listings table with moderation + `View listing` |
-| `bookings` | Bookings | Client-paginated (20/page) bookings table + `View booking` |
-| `owner_applications` | Owner Applications | Pending renter→landlord applications with Approve/Reject (`src/components/OwnerApplicationsView.tsx`) |
-| `audit_logs` | Audit Log | Recent admin actions, newest first (`src/components/AuditLogView.tsx`) |
-| `incomes` | Incomes | Revenue summary, service charge editor, fee income per booking |
-| `reports` | Reports | Aggregated metrics and attention items |
-| `settings` | Settings | Platform support details, payout day, maintenance mode |
-| `login` | *(guarded)* | Sign-in form; auto redirects |
+| `/` | Dashboard | Overview hero, stat cards, quick actions, system snapshot |
+| `/users` | Users | Client-paginated (20/page) users table with status actions + `View user` |
+| `/listings` | Listings | Client-paginated (20/page) listings table with moderation + `View listing` |
+| `/bookings` | Bookings | Client-paginated (20/page) bookings table + `View booking` |
+| `/owner-applications` | Owner Applications | Pending renter→landlord applications with Approve/Reject (`src/features/owner-applications/OwnerApplicationsView.tsx`) |
+| `/reports-queue` | Reports Queue | User-filed reports against listings/accounts (`src/features/reports-queue/ReportsQueueView.tsx`) |
+| `/disputes` | Disputes | Booking disputes raised by renters/landlords (`src/features/disputes/DisputesQueueView.tsx`) |
+| `/audit-log` | Audit Log | Recent admin actions, newest first (`src/features/audit-log/AuditLogView.tsx`) |
+| `/incomes` | Incomes | Revenue summary, service charge editor, fee income per booking |
+| `/reports` | Reports | Aggregated metrics and attention items |
+| `/settings` | Settings | Platform support details, payout day, maintenance mode |
+| `/login` | *(guarded)* | Sign-in form; redirects to `/` if already signed in, and back to `/login` from any authenticated path if signed out |
 
 Pagination is client-side: the full list is still fetched in one call and chunked in the browser (`usePagedItems` in `adminCore.tsx`), not paged via query params against the backend.
 
 ### 4.1 Detail views
 
-The three entity detail views are embedded in the same `App.tsx` render path via a parallel `detail` state:
+The three entity detail views are real dynamic routes with their id in the URL, read via `useParams()`:
 
-| Detail state | Opens from | Contents |
+| Path | Opens from | Contents |
 |---|---|---|
-| `{ kind: 'user', id }` | Users → View | profile summary, status, booking/listing counts, listings, bookings, status actions |
-| `{ kind: 'listing', id }` | Listings → View | title, images, host, description, amenities, rules, status actions, moderation, **Reviews panel** (fetches `GET /listings/:id/reviews`, flag/unflag via `PATCH /admin/reviews/:id/moderate`) |
-| `{ kind: 'booking', id }` | Bookings → View | stay window, renter, listing, cost breakdown, fee, status, payment |
+| `/users/:userId` | Users → View | profile summary, status, booking/listing counts, listings, bookings, status actions |
+| `/listings/:listingId` | Listings → View | title, images, host, description, amenities, rules, status actions, moderation, **Reviews panel** (fetches `GET /listings/:id/reviews`, flag/unflag via `PATCH /admin/reviews/:id/moderate`) |
+| `/bookings/:bookingId` | Bookings → View | stay window, renter, listing, cost breakdown, fee, status, payment |
+
+Each back button calls `navigate('/users')` / `navigate('/listings')` / `navigate('/bookings')` (not `navigate(-1)`), so "Back" always lands on the list even if the detail page was opened via a direct link.
 
 Note: the public reviews list excludes `REJECTED` reviews, so the Reviews panel updates moderation state optimistically in local state rather than refetching after a flag/unflag — a refetch would make a freshly-rejected review disappear from the list before it could be unflagged.
 
@@ -220,7 +262,7 @@ npm run build
 
 The de facto verification loop after any change is:
 1. `npm run build` — **must exit with 0**
-2. smoke-check the login form (demo mode fallback), dashboard cards, users list view, and one detail view.
+2. smoke-check the login form, dashboard cards, users list view, and one detail view — including a hard refresh on a deep link (e.g. `/listings/<id>`) to confirm the SPA fallback still serves `index.html`.
 
 ---
 

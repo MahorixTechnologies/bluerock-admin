@@ -2,33 +2,28 @@ import { useCallback, useState } from 'react';
 import {
   apiFetch,
   Badge,
-  cloneData,
-  demoOwnerApplications,
   ErrorBanner,
   formatDate,
   Icon,
-  isDemoSession,
   ownerApplicationTone,
   useAdminResource,
   usePagedItems,
   Pagination,
   type AdminOwnerApplication,
   type Session,
-} from '../lib/adminCore';
+} from '../../lib/adminCore';
 
 export default function OwnerApplicationsView({ apiUrl, session }: { apiUrl: string; session: Session }) {
-  const demoMode = isDemoSession(session);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const loader = useCallback(async () => {
-    if (demoMode) return cloneData(demoOwnerApplications);
     return await apiFetch<AdminOwnerApplication[]>(
       apiUrl,
       session.accessToken,
       '/admin/owner-applications?status=PENDING',
     );
-  }, [apiUrl, demoMode, session.accessToken]);
+  }, [apiUrl, session.accessToken]);
 
   const { data: items, setData: setItems, loading, error, reload } = useAdminResource<AdminOwnerApplication[]>(
     loader,
@@ -41,10 +36,6 @@ export default function OwnerApplicationsView({ apiUrl, session }: { apiUrl: str
     setActionError(null);
     setBusyId(userId);
     try {
-      if (demoMode) {
-        setItems((prev) => prev.filter((item) => item.id !== userId));
-        return;
-      }
       await apiFetch(apiUrl, session.accessToken, `/admin/owner-applications/${userId}/decision`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

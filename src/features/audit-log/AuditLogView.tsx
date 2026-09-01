@@ -1,18 +1,15 @@
 import { useCallback } from 'react';
 import {
   apiFetch,
-  cloneData,
-  demoAuditLogs,
   ErrorBanner,
   formatDateTime,
   Icon,
-  isDemoSession,
   useAdminResource,
   usePagedItems,
   Pagination,
   type AdminAuditLog,
   type Session,
-} from '../lib/adminCore';
+} from '../../lib/adminCore';
 
 function describeTarget(entry: AdminAuditLog) {
   return `${entry.targetType} · ${entry.targetId.slice(0, 8)}`;
@@ -28,12 +25,9 @@ function describeMetadata(metadata: unknown) {
 }
 
 export default function AuditLogView({ apiUrl, session }: { apiUrl: string; session: Session }) {
-  const demoMode = isDemoSession(session);
-
   const loader = useCallback(async () => {
-    if (demoMode) return cloneData(demoAuditLogs);
     return await apiFetch<AdminAuditLog[]>(apiUrl, session.accessToken, '/admin/audit-logs?limit=50');
-  }, [apiUrl, demoMode, session.accessToken]);
+  }, [apiUrl, session.accessToken]);
 
   const { data: items, loading, error, reload } = useAdminResource<AdminAuditLog[]>(loader, []);
   const { page, setPage, totalPages, pageItems } = usePagedItems(items);

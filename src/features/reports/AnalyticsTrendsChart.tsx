@@ -3,18 +3,15 @@ import {
   apiFetch,
   Badge,
   bookingStatusTone,
-  cloneData,
   ErrorBanner,
   formatMoney,
-  getDemoAnalyticsTrends,
   Icon,
-  isDemoSession,
   useAdminResource,
   type AdminAnalyticsTrends,
   type AnalyticsWeekPoint,
   type BadgeTone,
   type Session,
-} from '../lib/adminCore';
+} from '../../lib/adminCore';
 
 function formatWeekLabel(iso: string) {
   const d = new Date(`${iso}T00:00:00Z`);
@@ -129,12 +126,9 @@ const STATUS_TONE_VAR: Record<BadgeTone, string> = {
 };
 
 export default function AnalyticsTrendsChart({ apiUrl, session }: { apiUrl: string; session: Session }) {
-  const demoMode = isDemoSession(session);
-
   const loader = useCallback(async () => {
-    if (demoMode) return cloneData(getDemoAnalyticsTrends());
     return await apiFetch<AdminAnalyticsTrends>(apiUrl, session.accessToken, '/admin/analytics/trends');
-  }, [apiUrl, demoMode, session.accessToken]);
+  }, [apiUrl, session.accessToken]);
 
   const { data, loading, error, reload } = useAdminResource<AdminAnalyticsTrends>(loader, {
     series: [],

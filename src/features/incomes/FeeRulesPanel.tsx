@@ -1,17 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   apiFetch,
-  cloneData,
-  demoFeeRules,
   ErrorBanner,
   formatDateTime,
   Icon,
-  isDemoSession,
   SERVICE_FEE_RULE_KEY,
   useAdminResource,
   type AdminFeeRule,
   type Session,
-} from '../lib/adminCore';
+} from '../../lib/adminCore';
 
 /**
  * Editor for backend-persisted `FeeRule` rows (GET/PATCH /admin/fee-rules).
@@ -29,15 +26,13 @@ export default function FeeRulesPanel({
   session: Session;
   onServiceFeePercentChange?: (value: number) => void;
 }) {
-  const demoMode = isDemoSession(session);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
   const loader = useCallback(async () => {
-    if (demoMode) return cloneData(demoFeeRules);
     return await apiFetch<AdminFeeRule[]>(apiUrl, session.accessToken, '/admin/fee-rules');
-  }, [apiUrl, demoMode, session.accessToken]);
+  }, [apiUrl, session.accessToken]);
 
   const { data: rules, setData: setRules, loading, error, reload } = useAdminResource<AdminFeeRule[]>(loader, []);
 
@@ -60,19 +55,6 @@ export default function FeeRulesPanel({
     setSaveError(null);
     setSavingKey(rule.key);
     try {
-      if (demoMode) {
-        setRules((prev) =>
-          prev.map((item) =>
-            item.key === rule.key ? { ...item, value, updatedAt: new Date().toISOString() } : item,
-          ),
-        );
-        setDrafts((prev) => {
-          const next = { ...prev };
-          delete next[rule.key];
-          return next;
-        });
-        return;
-      }
       const updated = await apiFetch<AdminFeeRule>(
         apiUrl,
         session.accessToken,

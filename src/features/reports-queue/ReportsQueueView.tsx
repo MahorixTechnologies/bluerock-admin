@@ -2,12 +2,9 @@ import { useCallback, useState } from 'react';
 import {
   apiFetch,
   Badge,
-  cloneData,
-  demoReports,
   ErrorBanner,
   formatDateTime,
   Icon,
-  isDemoSession,
   reportStatusTone,
   useAdminResource,
   usePagedItems,
@@ -15,21 +12,19 @@ import {
   type AdminReport,
   type ReportStatus,
   type Session,
-} from '../lib/adminCore';
+} from '../../lib/adminCore';
 
 const STATUS_FILTERS: ReportStatus[] = ['OPEN', 'RESOLVED', 'DISMISSED'];
 
 export default function ReportsQueueView({ apiUrl, session }: { apiUrl: string; session: Session }) {
-  const demoMode = isDemoSession(session);
   const [statusFilter, setStatusFilter] = useState<ReportStatus>('OPEN');
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
 
   const loader = useCallback(async () => {
-    if (demoMode) return cloneData(demoReports).filter((item) => item.status === statusFilter);
     return await apiFetch<AdminReport[]>(apiUrl, session.accessToken, `/admin/reports?status=${statusFilter}`);
-  }, [apiUrl, demoMode, session.accessToken, statusFilter]);
+  }, [apiUrl, session.accessToken, statusFilter]);
 
   const { data: items, setData: setItems, loading, error, reload } = useAdminResource<AdminReport[]>(loader, []);
   const { page, setPage, totalPages, pageItems } = usePagedItems(items);
@@ -39,10 +34,6 @@ export default function ReportsQueueView({ apiUrl, session }: { apiUrl: string; 
     setBusyId(report.id);
     const note = noteDrafts[report.id]?.trim() || undefined;
     try {
-      if (demoMode) {
-        setItems((prev) => prev.filter((item) => item.id !== report.id));
-        return;
-      }
       await apiFetch(apiUrl, session.accessToken, `/admin/reports/${report.id}/resolve`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
