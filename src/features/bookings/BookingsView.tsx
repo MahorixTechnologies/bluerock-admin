@@ -1,9 +1,11 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   apiFetch,
   Badge,
   bookingStatusTone,
+  buildQuery,
+  emptyPagedResult,
   EmptyRow,
   ErrorBanner,
   formatDate,
@@ -11,12 +13,30 @@ import {
   Icon,
   Pagination,
   paymentTone,
-  SearchField,
   useAdminResource,
-  usePagedItems,
   type AdminBooking,
+  type PagedResult,
   type Session,
 } from '../../lib/adminCore';
+
+const PAGE_SIZE = 20;
+const STATUS_FILTERS: (AdminBooking['status'] | 'ALL')[] = [
+  'ALL',
+  'PENDING',
+  'CONFIRMED',
+  'CHECKED_IN',
+  'CHECKED_OUT',
+  'REJECTED',
+  'CANCELLED',
+  'COMPLETED',
+];
+const PAYMENT_FILTERS: (AdminBooking['paymentStatus'] | 'ALL')[] = [
+  'ALL',
+  'UNPAID',
+  'PAID',
+  'REFUND_PENDING',
+  'REFUNDED',
+];
 
 export default function BookingsView({
   apiUrl,
@@ -26,38 +46,62 @@ export default function BookingsView({
   session: Session;
 }) {
   const navigate = useNavigate();
-  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState<AdminBooking['status'] | 'ALL'>('ALL');
+  const [paymentStatus, setPaymentStatus] = useState<AdminBooking['paymentStatus'] | 'ALL'>('ALL');
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [status, paymentStatus]);
 
   const loader = useCallback(async () => {
-    return await apiFetch<AdminBooking[]>(apiUrl, session.accessToken, '/admin/bookings');
-  }, [apiUrl, session.accessToken]);
-
-  const { data: items, loading, error, reload } = useAdminResource<AdminBooking[]>(loader, []);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((b) => {
-      return (
-        b.listing.title.toLowerCase().includes(q) ||
-        b.listing.location.toLowerCase().includes(q) ||
-        b.renter.email.toLowerCase().includes(q) ||
-        b.status.toLowerCase().includes(q) ||
-        b.paymentStatus.toLowerCase().includes(q)
-      );
+    const qs = buildQuery({
+      status: status === 'ALL' ? undefined : status,
+      paymentStatus: paymentStatus === 'ALL' ? undefined : paymentStatus,
+      page,
+      pageSize: PAGE_SIZE,
     });
-  }, [items, query]);
+    return await apiFetch<PagedResult<AdminBooking>>(apiUrl, session.accessToken, `/admin/bookings${qs}`);
+  }, [apiUrl, session.accessToken, status, paymentStatus, page]);
 
-  const { page, setPage, totalPages, pageItems } = usePagedItems(filtered);
+  const { data: result, loading, error, reload } = useAdminResource<PagedResult<AdminBooking>>(
+    loader,
+    emptyPagedResult(PAGE_SIZE),
+  );
+
+  const totalPages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
 
   return (
     <div className="stack">
       <div className="toolbar">
         <span className="toolbarCount">
-          {loading ? 'Loading…' : `${filtered.length} ${filtered.length === 1 ? 'booking' : 'bookings'}`}
+          {loading ? 'Loading…' : `${result.total} ${result.total === 1 ? 'booking' : 'bookings'}`}
         </span>
         <div className="toolbarActions">
-          <SearchField value={query} onChange={setQuery} placeholder="Search listing, renter, status…" />
+          <div className="segmented">
+            {STATUS_FILTERS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={`segmented__item ${status === s ? 'segmented__item--active' : ''}`}
+                onClick={() => setStatus(s)}
+              >
+                {s === 'ALL' ? 'All statuses' : s.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
+          <div className="segmented">
+            {PAYMENT_FILTERS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                className={`segmented__item ${paymentStatus === p ? 'segmented__item--active' : ''}`}
+                onClick={() => setPaymentStatus(p)}
+              >
+                {p === 'ALL' ? 'All payments' : p.replace('_', ' ')}
+              </button>
+            ))}
+          </div>
           <button type="button" className="btn btn--ghost" onClick={() => void reload()}>
             <Icon name="refresh" size={16} />
             Refresh
@@ -85,10 +129,10 @@ export default function BookingsView({
             <tbody>
               {loading ? (
                 <EmptyRow span={8} label="Loading bookings…" />
-              ) : pageItems.length === 0 ? (
+              ) : result.data.length === 0 ? (
                 <EmptyRow span={8} label="No bookings found." />
               ) : (
-                pageItems.map((b) => (
+                result.data.map((b) => (
                   <tr key={b.id}>
                     <td>
                       <div className="cellUserText">
@@ -111,10 +155,10 @@ export default function BookingsView({
                     </td>
                     <td className="cellStrong">{formatMoney('NGN', b.total)}</td>
                     <td>
-                      <Badge tone={bookingStatusTone(b.status)}>{b.status}</Badge>
+                      <Badge tone={bookingStatusTone(b.status)}>{b.status.replace('_', ' ')}</Badge>
                     </td>
                     <td>
-                      <Badge tone={paymentTone(b.paymentStatus)}>{b.paymentStatus}</Badge>
+                      <Badge tone={paymentTone(b.paymentStatus)}>{b.paymentStatus.replace('_', ' ')}</Badge>
                     </td>
                     <td className="cellMuted">{formatDate(b.createdAt)}</td>
                     <td className="colActions">

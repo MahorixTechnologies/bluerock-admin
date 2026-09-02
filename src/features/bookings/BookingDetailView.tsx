@@ -6,10 +6,13 @@ import {
   bookingStatusTone,
   ErrorBanner,
   formatDate,
+  formatDateTime,
   formatMoney,
   Icon,
+  payoutTone,
   paymentTone,
-  type AdminBooking,
+  paymentTxTone,
+  type AdminBookingDetail,
   type Session,
 } from '../../lib/adminCore';
 
@@ -23,7 +26,7 @@ export default function BookingDetailView({
   const { bookingId = '' } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
   const onBack = () => navigate('/bookings');
-  const [item, setItem] = useState<AdminBooking | null>(null);
+  const [item, setItem] = useState<AdminBookingDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -31,10 +34,8 @@ export default function BookingDetailView({
     setLoading(true);
     setError(null);
     try {
-      const data = await apiFetch<AdminBooking[]>(apiUrl, session.accessToken, '/admin/bookings');
-      const detail = data.find((booking) => booking.id === bookingId) ?? null;
-      if (!detail) throw new Error('Booking not found');
-      setItem(detail);
+      const data = await apiFetch<AdminBookingDetail>(apiUrl, session.accessToken, `/admin/bookings/${bookingId}`);
+      setItem(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load booking');
       setItem(null);
@@ -81,8 +82,8 @@ export default function BookingDetailView({
             </div>
 
             <div className="userHeroActions">
-              <Badge tone={bookingStatusTone(item.status)}>{item.status}</Badge>
-              <Badge tone={paymentTone(item.paymentStatus)}>{item.paymentStatus}</Badge>
+              <Badge tone={bookingStatusTone(item.status)}>{item.status.replace('_', ' ')}</Badge>
+              <Badge tone={paymentTone(item.paymentStatus)}>{item.paymentStatus.replace('_', ' ')}</Badge>
             </div>
           </section>
 
@@ -173,6 +174,62 @@ export default function BookingDetailView({
                   <span className="detailLabel">Phone</span>
                   <strong>{item.renter.phone?.trim() || 'Not provided'}</strong>
                 </div>
+              </div>
+            </section>
+          </div>
+
+          <div className="userDetailGrid userDetailGrid--two">
+            <section className="panel">
+              <div className="panelHeader">
+                <div>
+                  <span className="panelEyebrow">Payments</span>
+                  <h3 className="panelTitle">Payment transactions for this booking</h3>
+                </div>
+              </div>
+              <div className="detailFeed">
+                {item.payments.length === 0 ? (
+                  <div className="feedEmpty">No payments recorded.</div>
+                ) : (
+                  item.payments.map((payment) => (
+                    <div key={payment.id} className="feedCard">
+                      <div className="feedCardTop">
+                        <strong>{formatMoney(payment.currency, payment.amount)}</strong>
+                        <Badge tone={paymentTxTone(payment.status)}>{payment.status}</Badge>
+                      </div>
+                      <span className="feedMeta">
+                        {payment.provider} · {payment.reference}
+                      </span>
+                      <span className="feedMeta">{formatDateTime(payment.createdAt)}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
+            <section className="panel">
+              <div className="panelHeader">
+                <div>
+                  <span className="panelEyebrow">Payouts</span>
+                  <h3 className="panelTitle">Owner payouts for this booking</h3>
+                </div>
+              </div>
+              <div className="detailFeed">
+                {item.payouts.length === 0 ? (
+                  <div className="feedEmpty">No payouts recorded.</div>
+                ) : (
+                  item.payouts.map((payout) => (
+                    <div key={payout.id} className="feedCard">
+                      <div className="feedCardTop">
+                        <strong>{formatMoney(payout.currency, payout.amount)}</strong>
+                        <Badge tone={payoutTone(payout.status)}>{payout.status}</Badge>
+                      </div>
+                      <span className="feedMeta">
+                        {payout.provider} · {payout.reference ?? 'No reference'}
+                      </span>
+                      <span className="feedMeta">{formatDateTime(payout.createdAt)}</span>
+                    </div>
+                  ))
+                )}
               </div>
             </section>
           </div>

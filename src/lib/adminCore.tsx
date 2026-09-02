@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 
 export type UserRole = 'RENTER' | 'LANDLORD' | 'ADMIN';
 export type UserStatus = 'ACTIVE' | 'SUSPENDED';
-export type ListingStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type ListingStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'ARCHIVED';
 export type OwnerApplicationStatus = 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
 export type ReviewModerationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type ReportTargetType = 'LISTING' | 'USER';
@@ -84,12 +84,17 @@ export type AdminBooking = {
   subtotal: number;
   serviceFee: number;
   total: number;
-  status: 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'CANCELLED' | 'COMPLETED';
-  paymentStatus: 'UNPAID' | 'PAID' | 'REFUNDED';
+  status: 'PENDING' | 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'REJECTED' | 'CANCELLED' | 'COMPLETED';
+  paymentStatus: 'UNPAID' | 'PAID' | 'REFUND_PENDING' | 'REFUNDED';
   createdAt: string;
   updatedAt: string;
   listing: { id: string; title: string; location: string; ownerId: string };
   renter: { id: string; email: string; name: string | null; phone: string | null };
+};
+
+export type AdminBookingDetail = AdminBooking & {
+  payments: AdminPayment[];
+  payouts: AdminPayout[];
 };
 
 export type AdminSettings = {
@@ -155,7 +160,87 @@ export type AdminReview = {
   ownerResponse: string | null;
   moderationStatus: ReviewModerationStatus;
   createdAt: string;
-  renter?: { id: string; name: string | null };
+  renter?: { id: string; name: string | null; email?: string };
+};
+
+export type AdminReviewWithListing = AdminReview & {
+  renter: { id: string; name: string | null; email: string };
+  listing: { id: string; title: string; ownerId: string };
+};
+
+export type PaymentPurpose = 'BOOKING' | 'FEATURED_LISTING';
+export type PaymentProvider = 'PAYSTACK' | 'FLUTTERWAVE';
+export type PaymentTxStatus = 'INITIATED' | 'SUCCESSFUL' | 'FAILED' | 'REFUNDED';
+
+export type AdminPayment = {
+  id: string;
+  purpose: PaymentPurpose;
+  bookingId: string | null;
+  listingId: string | null;
+  payerId: string;
+  provider: PaymentProvider;
+  reference: string;
+  providerTransactionId: string | null;
+  amount: number;
+  currency: 'NGN' | 'USD';
+  status: PaymentTxStatus;
+  rawPayload: unknown;
+  createdAt: string;
+  updatedAt: string;
+  payer: { id: string; email: string; name: string | null };
+  booking: { id: string; listingId: string } | null;
+  listing: { id: string; title: string } | null;
+};
+
+export type AdminPaymentDetail = Omit<AdminPayment, 'payer' | 'listing'> & {
+  payer: { id: string; email: string; name: string | null; phone: string | null };
+  booking: AdminBooking | null;
+  listing: { id: string; title: string; location: string } | null;
+};
+
+export type PayoutStatus = 'PENDING' | 'PROCESSING' | 'PAID' | 'FAILED';
+
+export type AdminPayout = {
+  id: string;
+  ownerId: string;
+  bookingId: string;
+  amount: number;
+  currency: 'NGN' | 'USD';
+  status: PayoutStatus;
+  provider: string;
+  reference: string | null;
+  providerTransferId: string | null;
+  rawPayload: unknown;
+  createdAt: string;
+  updatedAt: string;
+  paidAt: string | null;
+  owner: { id: string; email: string; name: string | null };
+  booking: { id: string; listing?: { id: string; title: string } };
+};
+
+export type AdminMessage = {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
+};
+
+export type AdminConversation = {
+  id: string;
+  listingId: string | null;
+  bookingId: string | null;
+  renterId: string;
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+  renter: { id: string; name: string | null; email: string };
+  owner: { id: string; name: string | null; email: string };
+  listing: { id: string; title: string } | null;
+  booking: { id: string } | null;
+  latestMessage: AdminMessage | null;
+  _count: { messages: number };
 };
 
 export type AdminReport = {
@@ -231,6 +316,26 @@ export function getDefaultSettings(): AdminSettings {
 }
 
 export type ApiEnvelope<T> = { success: boolean; message: string; data: T };
+
+export type PagedResult<T> = { data: T[]; total: number; page: number; pageSize: number };
+
+export function emptyPagedResult<T>(pageSize = 20): PagedResult<T> {
+  return { data: [], total: 0, page: 1, pageSize };
+}
+
+/**
+ * Builds a `?a=1&b=2` query string from a params object, skipping any
+ * key whose value is undefined, null, or an empty string.
+ */
+export function buildQuery(params: Record<string, string | number | undefined | null>): string {
+  const usp = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue;
+    usp.set(key, String(value));
+  }
+  const qs = usp.toString();
+  return qs ? `?${qs}` : '';
+}
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -554,19 +659,20 @@ export function userStatusTone(status: UserStatus): BadgeTone {
 export function listingStatusTone(status: ListingStatus): BadgeTone {
   if (status === 'APPROVED') return 'success';
   if (status === 'REJECTED') return 'danger';
+  if (status === 'ARCHIVED') return 'neutral';
   return 'warning';
 }
 
 export function bookingStatusTone(status: AdminBooking['status']): BadgeTone {
-  if (status === 'CONFIRMED') return 'success';
-  if (status === 'COMPLETED') return 'info';
+  if (status === 'CONFIRMED' || status === 'CHECKED_IN') return 'success';
+  if (status === 'COMPLETED' || status === 'CHECKED_OUT') return 'info';
   if (status === 'PENDING') return 'warning';
   return 'danger';
 }
 
 export function paymentTone(status: AdminBooking['paymentStatus']): BadgeTone {
   if (status === 'PAID') return 'success';
-  if (status === 'UNPAID') return 'warning';
+  if (status === 'UNPAID' || status === 'REFUND_PENDING') return 'warning';
   return 'neutral';
 }
 
@@ -593,6 +699,20 @@ export function disputeStatusTone(status: DisputeStatus): BadgeTone {
   if (status === 'RESOLVED') return 'success';
   if (status === 'REJECTED') return 'danger';
   if (status === 'UNDER_REVIEW') return 'info';
+  return 'warning';
+}
+
+export function paymentTxTone(status: PaymentTxStatus): BadgeTone {
+  if (status === 'SUCCESSFUL') return 'success';
+  if (status === 'FAILED') return 'danger';
+  if (status === 'REFUNDED') return 'neutral';
+  return 'warning';
+}
+
+export function payoutTone(status: PayoutStatus): BadgeTone {
+  if (status === 'PAID') return 'success';
+  if (status === 'FAILED') return 'danger';
+  if (status === 'PROCESSING') return 'info';
   return 'warning';
 }
 
@@ -680,6 +800,19 @@ export function useAdminResource<T>(loader: () => Promise<T>, initialValue: T) {
   }, [load]);
 
   return { data, setData, loading, error, setError, reload: load };
+}
+
+/**
+ * Debounces a fast-changing value (typically search input) so callers can
+ * depend on it in a fetch `useCallback` without refetching on every keystroke.
+ */
+export function useDebouncedValue<T>(value: T, delayMs = 350): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(timer);
+  }, [value, delayMs]);
+  return debounced;
 }
 
 /* -------------------------------------------------------------------------- */

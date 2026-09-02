@@ -14,6 +14,12 @@ import ReportsQueueView from '../features/reports-queue/ReportsQueueView';
 import DisputesQueueView from '../features/disputes/DisputesQueueView';
 import IncomesView from '../features/incomes/IncomesView';
 import ReportsView from '../features/reports/ReportsView';
+import PaymentsView from '../features/payments/PaymentsView';
+import PaymentDetailView from '../features/payments/PaymentDetailView';
+import PayoutsView from '../features/payouts/PayoutsView';
+import ReviewsView from '../features/reviews/ReviewsView';
+import ConversationsView from '../features/conversations/ConversationsView';
+import ConversationDetailView from '../features/conversations/ConversationDetailView';
 import SettingsView from '../features/settings/SettingsView';
 import { NAV_ITEMS, ROUTE_META } from './navigation';
 
@@ -150,6 +156,15 @@ export default function AppShell({
             <Route path="/audit-log" element={<AuditLogView apiUrl={apiUrl} session={session} />} />
             <Route path="/reports-queue" element={<ReportsQueueView apiUrl={apiUrl} session={session} />} />
             <Route path="/disputes" element={<DisputesQueueView apiUrl={apiUrl} session={session} />} />
+            <Route path="/payments" element={<PaymentsView apiUrl={apiUrl} session={session} />} />
+            <Route path="/payments/:paymentId" element={<PaymentDetailView apiUrl={apiUrl} session={session} />} />
+            <Route path="/payouts" element={<PayoutsView apiUrl={apiUrl} session={session} />} />
+            <Route path="/reviews" element={<ReviewsView apiUrl={apiUrl} session={session} />} />
+            <Route path="/conversations" element={<ConversationsView apiUrl={apiUrl} session={session} />} />
+            <Route
+              path="/conversations/:conversationId"
+              element={<ConversationDetailView apiUrl={apiUrl} session={session} />}
+            />
             <Route path="/incomes" element={<IncomesView apiUrl={apiUrl} session={session} />} />
             <Route path="/reports" element={<ReportsView apiUrl={apiUrl} session={session} />} />
             <Route path="/settings" element={<SettingsView settings={settings} onSettingsChange={onSettingsChange} />} />

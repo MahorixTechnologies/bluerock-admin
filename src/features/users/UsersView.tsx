@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   apiFetch,
   Badge,
+  buildQuery,
+  emptyPagedResult,
   EmptyRow,
   ErrorBanner,
   formatDate,
@@ -11,12 +13,18 @@ import {
   Pagination,
   SearchField,
   useAdminResource,
-  usePagedItems,
+  useDebouncedValue,
   userStatusTone,
   type AdminUser,
+  type PagedResult,
   type Session,
+  type UserRole,
   type UserStatus,
 } from '../../lib/adminCore';
+
+const PAGE_SIZE = 20;
+const ROLE_FILTERS: (UserRole | 'ALL')[] = ['ALL', 'RENTER', 'LANDLORD', 'ADMIN'];
+const STATUS_FILTERS: (UserStatus | 'ALL')[] = ['ALL', 'ACTIVE', 'SUSPENDED'];
 
 export default function UsersView({
   apiUrl,
@@ -27,29 +35,31 @@ export default function UsersView({
 }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
+  const debouncedQuery = useDebouncedValue(query);
+  const [role, setRole] = useState<UserRole | 'ALL'>('ALL');
+  const [status, setStatus] = useState<UserStatus | 'ALL'>('ALL');
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery, role, status]);
 
   const loader = useCallback(async () => {
-    return await apiFetch<AdminUser[]>(apiUrl, session.accessToken, '/admin/users');
-  }, [apiUrl, session.accessToken]);
-
-  const { data: items, setData: setItems, loading, error, setError, reload } = useAdminResource<AdminUser[]>(
-    loader,
-    [],
-  );
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((u) => {
-      return (
-        u.email.toLowerCase().includes(q) ||
-        u.role.toLowerCase().includes(q) ||
-        u.status.toLowerCase().includes(q)
-      );
+    const qs = buildQuery({
+      role: role === 'ALL' ? undefined : role,
+      status: status === 'ALL' ? undefined : status,
+      search: debouncedQuery.trim() || undefined,
+      page,
+      pageSize: PAGE_SIZE,
     });
-  }, [items, query]);
+    return await apiFetch<PagedResult<AdminUser>>(apiUrl, session.accessToken, `/admin/users${qs}`);
+  }, [apiUrl, session.accessToken, role, status, debouncedQuery, page]);
 
-  const { page, setPage, totalPages, pageItems } = usePagedItems(filtered);
+  const { data: result, setData: setResult, loading, error, setError, reload } = useAdminResource<
+    PagedResult<AdminUser>
+  >(loader, emptyPagedResult(PAGE_SIZE));
+
+  const totalPages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
 
   const updateStatus = async (userId: string, next: UserStatus) => {
     setError(null);
@@ -64,7 +74,10 @@ export default function UsersView({
           body: JSON.stringify({ status: next }),
         },
       );
-      setItems((prev) => prev.map((u) => (u.id === data.id ? { ...u, status: data.status } : u)));
+      setResult((prev) => ({
+        ...prev,
+        data: prev.data.map((u) => (u.id === data.id ? { ...u, status: data.status } : u)),
+      }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update user');
     }
@@ -74,10 +87,34 @@ export default function UsersView({
     <div className="stack">
       <div className="toolbar">
         <span className="toolbarCount">
-          {loading ? 'Loading…' : `${filtered.length} ${filtered.length === 1 ? 'user' : 'users'}`}
+          {loading ? 'Loading…' : `${result.total} ${result.total === 1 ? 'user' : 'users'}`}
         </span>
         <div className="toolbarActions">
-          <SearchField value={query} onChange={setQuery} placeholder="Search email, role, status…" />
+          <SearchField value={query} onChange={setQuery} placeholder="Search email, name, phone…" />
+          <div className="segmented">
+            {ROLE_FILTERS.map((r) => (
+              <button
+                key={r}
+                type="button"
+                className={`segmented__item ${role === r ? 'segmented__item--active' : ''}`}
+                onClick={() => setRole(r)}
+              >
+                {r === 'ALL' ? 'All roles' : r}
+              </button>
+            ))}
+          </div>
+          <div className="segmented">
+            {STATUS_FILTERS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={`segmented__item ${status === s ? 'segmented__item--active' : ''}`}
+                onClick={() => setStatus(s)}
+              >
+                {s === 'ALL' ? 'All statuses' : s}
+              </button>
+            ))}
+          </div>
           <button type="button" className="btn btn--ghost" onClick={() => void reload()}>
             <Icon name="refresh" size={16} />
             Refresh
@@ -103,10 +140,10 @@ export default function UsersView({
             <tbody>
               {loading ? (
                 <EmptyRow span={6} label="Loading users…" />
-              ) : pageItems.length === 0 ? (
+              ) : result.data.length === 0 ? (
                 <EmptyRow span={6} label="No users found." />
               ) : (
-                pageItems.map((u) => (
+                result.data.map((u) => (
                   <tr key={u.id}>
                     <td>
                       <div className="cellUser">

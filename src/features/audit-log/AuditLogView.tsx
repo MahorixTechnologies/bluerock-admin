@@ -1,15 +1,19 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   apiFetch,
+  buildQuery,
+  emptyPagedResult,
   ErrorBanner,
   formatDateTime,
   Icon,
-  useAdminResource,
-  usePagedItems,
   Pagination,
+  useAdminResource,
   type AdminAuditLog,
+  type PagedResult,
   type Session,
 } from '../../lib/adminCore';
+
+const PAGE_SIZE = 20;
 
 function describeTarget(entry: AdminAuditLog) {
   return `${entry.targetType} · ${entry.targetId.slice(0, 8)}`;
@@ -25,17 +29,24 @@ function describeMetadata(metadata: unknown) {
 }
 
 export default function AuditLogView({ apiUrl, session }: { apiUrl: string; session: Session }) {
-  const loader = useCallback(async () => {
-    return await apiFetch<AdminAuditLog[]>(apiUrl, session.accessToken, '/admin/audit-logs?limit=50');
-  }, [apiUrl, session.accessToken]);
+  const [page, setPage] = useState(1);
 
-  const { data: items, loading, error, reload } = useAdminResource<AdminAuditLog[]>(loader, []);
-  const { page, setPage, totalPages, pageItems } = usePagedItems(items);
+  const loader = useCallback(async () => {
+    const qs = buildQuery({ page, pageSize: PAGE_SIZE });
+    return await apiFetch<PagedResult<AdminAuditLog>>(apiUrl, session.accessToken, `/admin/audit-logs${qs}`);
+  }, [apiUrl, session.accessToken, page]);
+
+  const { data: result, loading, error, reload } = useAdminResource<PagedResult<AdminAuditLog>>(
+    loader,
+    emptyPagedResult(PAGE_SIZE),
+  );
+
+  const totalPages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
 
   return (
     <div className="stack">
       <div className="toolbar">
-        <span className="toolbarCount">{loading ? 'Loading…' : `${items.length} recent actions`}</span>
+        <span className="toolbarCount">{loading ? 'Loading…' : `${result.total} recent actions`}</span>
         <div className="toolbarActions">
           <button type="button" className="btn btn--ghost" onClick={() => void reload()}>
             <Icon name="refresh" size={16} />
@@ -65,14 +76,14 @@ export default function AuditLogView({ apiUrl, session }: { apiUrl: string; sess
                     <div className="tableEmpty">Loading audit log…</div>
                   </td>
                 </tr>
-              ) : pageItems.length === 0 ? (
+              ) : result.data.length === 0 ? (
                 <tr>
                   <td colSpan={5}>
                     <div className="tableEmpty">No audit log entries yet.</div>
                   </td>
                 </tr>
               ) : (
-                pageItems.map((entry) => (
+                result.data.map((entry) => (
                   <tr key={entry.id}>
                     <td>
                       <div className="cellUserText">

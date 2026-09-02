@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   apiFetch,
   Badge,
+  buildQuery,
+  emptyPagedResult,
   EmptyRow,
   ErrorBanner,
   formatDate,
@@ -12,10 +14,15 @@ import {
   Pagination,
   SearchField,
   useAdminResource,
-  usePagedItems,
+  useDebouncedValue,
   type AdminListing,
+  type ListingStatus,
+  type PagedResult,
   type Session,
 } from '../../lib/adminCore';
+
+const PAGE_SIZE = 20;
+const STATUS_FILTERS: (ListingStatus | 'ALL')[] = ['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'ARCHIVED'];
 
 export default function ListingsView({
   apiUrl,
@@ -26,34 +33,31 @@ export default function ListingsView({
 }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
-  const [featuredOnly, setFeaturedOnly] = useState(false);
+  const debouncedQuery = useDebouncedValue(query);
+  const [status, setStatus] = useState<ListingStatus | 'ALL'>('ALL');
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedQuery, status]);
 
   const loader = useCallback(async () => {
-    return await apiFetch<AdminListing[]>(apiUrl, session.accessToken, '/admin/listings');
-  }, [apiUrl, session.accessToken]);
-
-  const { data: items, setData: setItems, loading, error, setError, reload } = useAdminResource<AdminListing[]>(
-    loader,
-    [],
-  );
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return items.filter((l) => {
-      if (featuredOnly && !l.featured) return false;
-      if (!q) return true;
-      return (
-        l.title.toLowerCase().includes(q) ||
-        l.location.toLowerCase().includes(q) ||
-        l.status.toLowerCase().includes(q) ||
-        l.owner.email.toLowerCase().includes(q)
-      );
+    const qs = buildQuery({
+      status: status === 'ALL' ? undefined : status,
+      search: debouncedQuery.trim() || undefined,
+      page,
+      pageSize: PAGE_SIZE,
     });
-  }, [items, query, featuredOnly]);
+    return await apiFetch<PagedResult<AdminListing>>(apiUrl, session.accessToken, `/admin/listings${qs}`);
+  }, [apiUrl, session.accessToken, status, debouncedQuery, page]);
 
-  const { page, setPage, totalPages, pageItems } = usePagedItems(filtered);
+  const { data: result, setData: setResult, loading, error, setError, reload } = useAdminResource<
+    PagedResult<AdminListing>
+  >(loader, emptyPagedResult(PAGE_SIZE));
 
-  const setStatus = async (listingId: string, status: 'APPROVED' | 'REJECTED') => {
+  const totalPages = Math.max(1, Math.ceil(result.total / PAGE_SIZE));
+
+  const setListingStatus = async (listingId: string, next: 'APPROVED' | 'REJECTED') => {
     setError(null);
     try {
       const data = await apiFetch<AdminListing>(
@@ -63,10 +67,13 @@ export default function ListingsView({
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status }),
+          body: JSON.stringify({ status: next }),
         },
       );
-      setItems((prev) => prev.map((l) => (l.id === data.id ? { ...l, status: data.status } : l)));
+      setResult((prev) => ({
+        ...prev,
+        data: prev.data.map((l) => (l.id === data.id ? { ...l, status: data.status } : l)),
+      }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update listing');
     }
@@ -76,18 +83,22 @@ export default function ListingsView({
     <div className="stack">
       <div className="toolbar">
         <span className="toolbarCount">
-          {loading ? 'Loading…' : `${filtered.length} ${filtered.length === 1 ? 'listing' : 'listings'}`}
+          {loading ? 'Loading…' : `${result.total} ${result.total === 1 ? 'listing' : 'listings'}`}
         </span>
         <div className="toolbarActions">
-          <SearchField value={query} onChange={setQuery} placeholder="Search title, location, owner…" />
-          <label className="checkboxField">
-            <input
-              type="checkbox"
-              checked={featuredOnly}
-              onChange={(e) => setFeaturedOnly(e.target.checked)}
-            />
-            Featured only
-          </label>
+          <SearchField value={query} onChange={setQuery} placeholder="Search title, location…" />
+          <div className="segmented">
+            {STATUS_FILTERS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={`segmented__item ${status === s ? 'segmented__item--active' : ''}`}
+                onClick={() => setStatus(s)}
+              >
+                {s === 'ALL' ? 'All statuses' : s}
+              </button>
+            ))}
+          </div>
           <button type="button" className="btn btn--ghost" onClick={() => void reload()}>
             <Icon name="refresh" size={16} />
             Refresh
@@ -115,10 +126,10 @@ export default function ListingsView({
             <tbody>
               {loading ? (
                 <EmptyRow span={8} label="Loading listings…" />
-              ) : pageItems.length === 0 ? (
+              ) : result.data.length === 0 ? (
                 <EmptyRow span={8} label="No listings found." />
               ) : (
-                pageItems.map((l) => (
+                result.data.map((l) => (
                   <tr key={l.id}>
                     <td>
                       <div className="cellUserText">
@@ -159,7 +170,7 @@ export default function ListingsView({
                             <button
                               type="button"
                               className="btn btn--soft btn--sm"
-                              onClick={() => void setStatus(l.id, 'APPROVED')}
+                              onClick={() => void setListingStatus(l.id, 'APPROVED')}
                             >
                               <Icon name="check" size={14} />
                               Approve
@@ -167,7 +178,7 @@ export default function ListingsView({
                             <button
                               type="button"
                               className="btn btn--danger btn--sm"
-                              onClick={() => void setStatus(l.id, 'REJECTED')}
+                              onClick={() => void setListingStatus(l.id, 'REJECTED')}
                             >
                               <Icon name="x" size={14} />
                               Reject

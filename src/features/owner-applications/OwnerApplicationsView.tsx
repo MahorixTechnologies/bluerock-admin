@@ -10,10 +10,14 @@ import {
   usePagedItems,
   Pagination,
   type AdminOwnerApplication,
+  type OwnerApplicationStatus,
   type Session,
 } from '../../lib/adminCore';
 
+const STATUS_FILTERS: OwnerApplicationStatus[] = ['PENDING', 'APPROVED', 'REJECTED', 'NONE'];
+
 export default function OwnerApplicationsView({ apiUrl, session }: { apiUrl: string; session: Session }) {
+  const [statusFilter, setStatusFilter] = useState<OwnerApplicationStatus>('PENDING');
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -21,9 +25,9 @@ export default function OwnerApplicationsView({ apiUrl, session }: { apiUrl: str
     return await apiFetch<AdminOwnerApplication[]>(
       apiUrl,
       session.accessToken,
-      '/admin/owner-applications?status=PENDING',
+      `/admin/owner-applications?status=${statusFilter}`,
     );
-  }, [apiUrl, session.accessToken]);
+  }, [apiUrl, session.accessToken, statusFilter]);
 
   const { data: items, setData: setItems, loading, error, reload } = useAdminResource<AdminOwnerApplication[]>(
     loader,
@@ -53,9 +57,23 @@ export default function OwnerApplicationsView({ apiUrl, session }: { apiUrl: str
     <div className="stack">
       <div className="toolbar">
         <span className="toolbarCount">
-          {loading ? 'Loading…' : `${items.length} pending ${items.length === 1 ? 'application' : 'applications'}`}
+          {loading
+            ? 'Loading…'
+            : `${items.length} ${statusFilter.toLowerCase()} ${items.length === 1 ? 'application' : 'applications'}`}
         </span>
         <div className="toolbarActions">
+          <div className="segmented">
+            {STATUS_FILTERS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={`segmented__item ${statusFilter === s ? 'segmented__item--active' : ''}`}
+                onClick={() => setStatusFilter(s)}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
           <button type="button" className="btn btn--ghost" onClick={() => void reload()}>
             <Icon name="refresh" size={16} />
             Refresh
@@ -96,7 +114,7 @@ export default function OwnerApplicationsView({ apiUrl, session }: { apiUrl: str
               ) : pageItems.length === 0 ? (
                 <tr>
                   <td colSpan={5}>
-                    <div className="tableEmpty">No pending owner applications.</div>
+                    <div className="tableEmpty">No {statusFilter.toLowerCase()} owner applications.</div>
                   </td>
                 </tr>
               ) : (
@@ -118,26 +136,30 @@ export default function OwnerApplicationsView({ apiUrl, session }: { apiUrl: str
                       {item.ownerApplicationAt ? formatDate(item.ownerApplicationAt) : '—'}
                     </td>
                     <td className="colActions">
-                      <div className="actionCluster">
-                        <button
-                          type="button"
-                          className="btn btn--soft btn--sm"
-                          disabled={busyId === item.id}
-                          onClick={() => void decide(item.id, 'APPROVE')}
-                        >
-                          <Icon name="check" size={14} />
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn--danger btn--sm"
-                          disabled={busyId === item.id}
-                          onClick={() => void decide(item.id, 'REJECT')}
-                        >
-                          <Icon name="x" size={14} />
-                          Reject
-                        </button>
-                      </div>
+                      {item.ownerApplicationStatus === 'PENDING' ? (
+                        <div className="actionCluster">
+                          <button
+                            type="button"
+                            className="btn btn--soft btn--sm"
+                            disabled={busyId === item.id}
+                            onClick={() => void decide(item.id, 'APPROVE')}
+                          >
+                            <Icon name="check" size={14} />
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn--danger btn--sm"
+                            disabled={busyId === item.id}
+                            onClick={() => void decide(item.id, 'REJECT')}
+                          >
+                            <Icon name="x" size={14} />
+                            Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="cellDash">—</span>
+                      )}
                     </td>
                   </tr>
                 ))
