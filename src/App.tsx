@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import './App.css';
 import {
-  API_URL_KEY,
   SESSION_KEY,
   SETTINGS_KEY,
   getDefaultSettings,
@@ -17,14 +16,11 @@ import LoginView from './features/auth/LoginView';
 
 function App() {
   const defaultApiUrl = useMemo(() => {
-    const configured = import.meta.env.VITE_API_URL;
+    const configured = import.meta.env.VITE_API_URL || 'https://bluerock-backend-one.vercel.app';
     return normalizeApiUrl(typeof configured === 'string' ? configured : 'http://localhost:3000');
   }, []);
 
-  const [apiUrl, setApiUrl] = useState(() => {
-    const stored = localStorage.getItem(API_URL_KEY);
-    return normalizeApiUrl(stored || defaultApiUrl);
-  });
+  const [apiUrl, setApiUrl] = useState(defaultApiUrl);
 
   const [session, setSession] = useState<Session | null>(() => {
     const stored = safeParseJson<Session>(localStorage.getItem(SESSION_KEY));
@@ -37,10 +33,6 @@ function App() {
     return stored ?? getDefaultSettings();
   });
   const { isDark, toggle } = useDarkMode();
-
-  useEffect(() => {
-    localStorage.setItem(API_URL_KEY, apiUrl);
-  }, [apiUrl]);
 
   useEffect(() => {
     if (!session) return;

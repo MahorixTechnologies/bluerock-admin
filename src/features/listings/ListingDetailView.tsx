@@ -31,9 +31,11 @@ export default function ListingDetailView({
     setLoading(true);
     setError(null);
     try {
-      const data = await apiFetch<AdminListing[]>(apiUrl, session.accessToken, '/admin/listings');
-      const detail = data.find((listing) => listing.id === listingId) ?? null;
-      if (!detail) throw new Error('Listing not found');
+      const detail = await apiFetch<AdminListing>(
+        apiUrl,
+        session.accessToken,
+        `/admin/listings/${listingId}`,
+      );
       setItem(detail);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load listing');
